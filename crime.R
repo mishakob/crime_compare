@@ -1,4 +1,4 @@
-setwd("~/Documents/data science/data incubator")
+setwd("~/Documents/datascience/dataincubator/crime_compare")
 library(readr)
 library(dplyr)
 library(lubridate)
@@ -19,7 +19,7 @@ library(reshape2)
 
 
 # reading data bases
-washingtonDC_2013 <- read_csv("crime_washingtonDC_2013.csv")
+washingtonDC_2013 <- read_csv("crime_incidents_2013_CSV.csv")
 chicago <- read_csv("crime_chicago.csv")
 #######################################
 
@@ -29,7 +29,6 @@ chicago$Date <- mdy_hms(chicago$Date)
 
 # create chicago data base for year 2013
 chicago_2013 <- chicago %>% 
-  mutate(Year = year(Date)) %>%
   filter(Year == 2013)
 
 # factorize
@@ -58,8 +57,11 @@ chicago_2013.clean <- chicago_2013 %>%
 # settling discrepancies between offense classification
 # for Chicago - combining "assault" and "battery" into "assault", "sex assault" and "sex offense" into "sex abuse"
 # for Washington - combining "theft f/auto" and "theft/other" into "theft"
-levels(chicago_2013.clean$OFFENSE) <- c("ARSON","ASSAULT","ASSAULT","BURGLARY","SEX ABUSE","HOMICIDE","MOTOR VEHICLE THEFT","ROBBERY","SEX ABUSE","THEFT")
-levels(washingtonDC_2013$OFFENSE) <- c("ARSON","ASSAULT","BURGLARY","HOMICIDE","MOTOR VEHICLE THEFT","ROBBERY","SEX ABUSE","THEFT","THEFT")
+levels(chicago_2013.clean$OFFENSE) <- c("ARSON","ASSAULT","ASSAULT","BURGLARY","SEX ABUSE","HOMICIDE","AUTO THEFT","ROBBERY","SEX ABUSE","THEFT")
+levels(washingtonDC_2013$OFFENSE) <- c("ARSON","ASSAULT","BURGLARY","HOMICIDE","AUTO THEFT","ROBBERY","SEX ABUSE","THEFT","THEFT")
+
+# reordering chicago levels
+chicago_2013.clean$OFFENSE = factor(chicago_2013.clean$OFFENSE,levels(chicago_2013.clean$OFFENSE)[c(1:3,5:7,4,8)])
 
 # calculating percentage of offence types
 offense.chicago_2013.clean <- chicago_2013.clean %>%
@@ -81,26 +83,4 @@ joined.offense.m <- melt(joined.offense,id.vars=c("OFFENSE","n.chicago_2013.clea
   arrange(desc(value))
 offense.barplot <- qplot(x=OFFENSE, y=value, fill=variable,
                        data=joined.offense.m, geom="bar", stat="identity",
-                       position="dodge",ylab="%",main="Crime in cities of chicago_2013.clean and washingtonDC_2013 DC: Offense type")
-
-# creating the "hour" variable
-chicago_2013.clean <- chicago_2013.clean %>%
-  mutate(hour = hour(Date))
-washingtonDC_2013 <- washingtonDC_2013 %>%
-  mutate(hour = hour(LASTMODIFIEDDATE))
-
-# plot 2
-theft.chicago <- chicago_2013.clean %>%
-  select(OFFENSE, hour) %>%
-  filter(OFFENSE == "THEFT") %>%
-  count(hour)
-theft.washington <- washingtonDC_2013 %>%
-  select(OFFENSE, hour) %>%
-  filter(OFFENSE == "THEFT") %>%
-  count(hour)
-
-ggplot(theft.chicago, aes(x = hour)) + geom_histogram(breaks = seq(0, 
-                                                                                    24), width = 2, colour = "grey") + coord_polar(start = 0) + theme_minimal() + 
-  scale_fill_brewer() + ylab("Count") + ggtitle("Theft in Chicago by Time of day") + 
-  scale_x_continuous("", limits = c(0, 24), breaks = seq(0, 24), labels = seq(0, 
-                                                                              24))
+                       position="dodge",ylab="%",main="Crime in cities of Chicago and Washington DC based on offense type (year 2013)")
